@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-wig-prompt-rag"
+version = "0.1.0"
+description = "Local retrieval and deterministic validation for the AI wig video prompt Codex workbench"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+wig-rag = "rag_app.cli:main"
+
+[tool.setuptools]
+packages = ["rag_app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
