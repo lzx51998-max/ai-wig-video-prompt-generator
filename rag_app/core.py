@@ -7,21 +7,24 @@ import re
 import zipfile
 from dataclasses import MISSING, asdict, dataclass, field
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 from xml.etree import ElementTree
 
 
-CREATIVE_TYPES = {"before_after", "finished_showcase"}
+CREATIVE_TYPES = {"indoor", "outdoor"}
 REVIEW_FIELDS = [
     "id",
     "creative_type",
-    "scenario",
-    "wig_features",
-    "main_action",
+    "scene",
+    "wig_focus",
+    "action_plan",
+    "timeline",
     "camera",
     "lighting",
     "props",
-    "duration",
+    "continuity",
+    "technical",
+    "audio",
     "positive_en",
     "positive_zh",
     "quality_status",
@@ -52,13 +55,16 @@ def state_dir() -> Path:
 class Sample:
     id: str
     creative_type: str
-    scenario: str
-    wig_features: list[str] = field(default_factory=list)
-    main_action: str = ""
-    camera: str = ""
-    lighting: str = ""
+    scene: dict[str, Any] = field(default_factory=dict)
+    wig_focus: list[str] = field(default_factory=list)
+    action_plan: dict[str, Any] = field(default_factory=dict)
+    timeline: list[dict[str, Any]] = field(default_factory=list)
+    camera: dict[str, Any] = field(default_factory=dict)
+    lighting: dict[str, Any] = field(default_factory=dict)
     props: list[str] = field(default_factory=list)
-    duration: int = 10
+    continuity: dict[str, Any] = field(default_factory=dict)
+    technical: dict[str, Any] = field(default_factory=dict)
+    audio: dict[str, Any] = field(default_factory=dict)
     positive_en: str = ""
     positive_zh: str = ""
     quality_status: str = "draft"
@@ -68,15 +74,24 @@ class Sample:
     @classmethod
     def from_dict(cls, raw: dict) -> "Sample":
         data = dict(raw)
-        for key in ("wig_features", "props"):
-            value = data.get(key, [])
+        data = _upgrade_legacy_sample(data)
+        for key in ("scene", "action_plan", "camera", "lighting", "continuity", "technical", "audio"):
+            parsed = _parse_structured(data.get(key), {})
+            if not isinstance(parsed, dict):
+                raise WorkbenchError(f"样例 {data.get('id', '<unknown>')} 的 {key} 必须是 JSON 对象")
+            data[key] = parsed
+        for key in ("wig_focus", "timeline", "props"):
+            default: list = []
+            value = _parse_structured(data.get(key), default)
             if isinstance(value, str):
                 value = [item.strip() for item in re.split(r"[;,，；]", value) if item.strip()]
+            if not isinstance(value, list):
+                raise WorkbenchError(f"样例 {data.get('id', '<unknown>')} 的 {key} 必须是 JSON 数组")
             data[key] = list(value or [])
         try:
-            data["duration"] = int(data.get("duration") or 10)
+            data["technical"]["duration_seconds"] = int(data["technical"].get("duration_seconds") or 10)
         except (TypeError, ValueError) as exc:
-            raise WorkbenchError(f"样例 {data.get('id', '<unknown>')} 的 duration 无效") from exc
+            raise WorkbenchError(f"样例 {data.get('id', '<unknown>')} 的 technical.duration_seconds 无效") from exc
         values = {}
         for key, field_info in cls.__dataclass_fields__.items():
             if key in data:
@@ -97,21 +112,47 @@ class Sample:
         if self.quality_status not in {"draft", "approved", "rejected"}:
             raise WorkbenchError(f"样例 {self.id} 的 quality_status 无效")
         if not 8 <= self.duration <= 12:
-            raise WorkbenchError(f"样例 {self.id} 的 duration 必须在 8–12 秒")
+            raise WorkbenchError(f"样例 {self.id} 的 technical.duration_seconds 必须在 8–12 秒")
         if self.quality_status == "approved" and not (self.positive_en and self.positive_zh):
             raise WorkbenchError(f"已批准样例 {self.id} 必须同时有中英文正向提示词")
+        if self.quality_status == "approved" and not (self.scene and self.action_plan and self.timeline):
+            raise WorkbenchError(f"已批准样例 {self.id} 必须包含 scene、action_plan 和 timeline")
+        mode = str(self.camera.get("continuity_mode", ""))
+        if self.creative_type == "outdoor" and mode != "one_take":
+            raise WorkbenchError(f"室外样例 {self.id} 的 camera.continuity_mode 必须是 one_take")
+        if self.creative_type == "indoor" and mode not in {"one_take", "planned_cuts"}:
+            raise WorkbenchError(f"室内样例 {self.id} 的 camera.continuity_mode 必须是 one_take 或 planned_cuts")
+
+    @property
+    def duration(self) -> int:
+        return int(self.technical.get("duration_seconds", 10))
+
+    @property
+    def scenario(self) -> str:
+        return str(self.scene.get("summary") or self.scene.get("subtype") or "")
+
+    @property
+    def wig_features(self) -> list[str]:
+        return self.wig_focus
+
+    @property
+    def main_action(self) -> str:
+        return str(self.action_plan.get("summary") or self.action_plan.get("body_action") or "")
 
     def retrieval_text(self) -> str:
         return "\n".join(
             [
                 f"creative_type: {self.creative_type}",
-                f"scenario: {self.scenario}",
-                f"wig_features: {', '.join(self.wig_features)}",
-                f"main_action: {self.main_action}",
-                f"camera: {self.camera}",
-                f"lighting: {self.lighting}",
+                f"scene: {_compact_json(self.scene)}",
+                f"wig_focus: {', '.join(self.wig_focus)}",
+                f"action_plan: {_compact_json(self.action_plan)}",
+                f"timeline: {_compact_json(self.timeline)}",
+                f"camera: {_compact_json(self.camera)}",
+                f"lighting: {_compact_json(self.lighting)}",
                 f"props: {', '.join(self.props)}",
-                f"duration: {self.duration}",
+                f"continuity: {_compact_json(self.continuity)}",
+                f"technical: {_compact_json(self.technical)}",
+                f"audio: {_compact_json(self.audio)}",
                 self.positive_en,
                 self.positive_zh,
             ]
@@ -149,6 +190,54 @@ def save_samples(samples: Iterable[Sample], path: Path | None = None) -> None:
     ordered = sorted(samples, key=lambda item: item.id)
     content = "".join(json.dumps(item.to_dict(), ensure_ascii=False, separators=(",", ":")) + "\n" for item in ordered)
     corpus_path.write_text(content, encoding="utf-8")
+
+
+def _compact_json(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def _parse_structured(value: object, default: object) -> object:
+    if value is None or value == "":
+        return default.copy() if isinstance(default, (dict, list)) else default
+    if isinstance(value, (dict, list)):
+        return value
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return value
+    return value
+
+
+def _upgrade_legacy_sample(data: dict) -> dict:
+    if "scene" in data:
+        return data
+    scenario = str(data.pop("scenario", ""))
+    wig_features = data.pop("wig_features", [])
+    main_action = str(data.pop("main_action", ""))
+    camera = str(data.pop("camera", ""))
+    lighting = str(data.pop("lighting", ""))
+    duration = data.pop("duration", 10)
+    if isinstance(wig_features, str):
+        wig_features = [item.strip() for item in re.split(r"[;,，；]", wig_features) if item.strip()]
+    creative_type = str(data.get("creative_type", ""))
+    if not creative_type:
+        creative_type = "outdoor" if _looks_outdoor(scenario) else "indoor"
+        data["creative_type"] = creative_type
+    data.update(
+        {
+            "scene": {"summary": scenario, "subtype": "", "start_position": "", "movement_space": "", "background_anchors": []},
+            "wig_focus": list(wig_features or []),
+            "action_plan": {"summary": main_action, "lifestyle_hook": "", "body_action": main_action, "hair_action": "", "detail_action": "", "ending_action": "", "action_tags": []},
+            "timeline": [],
+            "camera": {"summary": camera, "opening_shot": "", "movement": "", "framing": "half-body", "continuity_mode": "one_take"},
+            "lighting": {"summary": lighting, "source": "background_reference", "direction": "background_reference", "color_temperature": "background_reference", "brightness_and_shadows": "background_reference"},
+            "continuity": {},
+            "technical": {"duration_seconds": duration, "aspect_ratio": "9:16", "frame_rate": "30fps", "quality": "4K detail", "capture_style": "realistic smartphone footage", "skin_texture": "natural"},
+            "audio": {"ambience": "natural ambient sound", "dialogue": "none", "music": "none"},
+        }
+    )
+    return data
 
 
 def corpus_fingerprint(samples: Iterable[Sample]) -> str:
@@ -205,10 +294,32 @@ def _source_files(input_path: Path) -> list[Path]:
     raise WorkbenchError(f"输入路径不存在：{input_path}")
 
 
-def _infer_creative_type(text: str) -> str:
-    before_after_terms = ("before and after", "transformation", "reveal", "换发", "反差", "转场")
+def _looks_outdoor(text: str) -> bool:
+    outdoor_terms = (
+        "outdoor",
+        "outside",
+        "street",
+        "road",
+        "garden",
+        "path",
+        "courtyard",
+        "terrace",
+        "户外",
+        "室外",
+        "街道",
+        "道路",
+        "小径",
+        "花园",
+        "庭院",
+        "露台",
+        "自行车旁",
+    )
     lowered = text.lower()
-    return "before_after" if any(term in lowered for term in before_after_terms) else "finished_showcase"
+    return any(term in lowered for term in outdoor_terms)
+
+
+def _infer_creative_type(text: str) -> str:
+    return "outdoor" if _looks_outdoor(text) else "indoor"
 
 
 def ingest_sources(input_path: Path, output_csv: Path) -> int:
@@ -221,13 +332,57 @@ def ingest_sources(input_path: Path, output_csv: Path) -> int:
                 {
                     "id": f"import-{digest}",
                     "creative_type": _infer_creative_type(text),
-                    "scenario": "",
-                    "wig_features": "",
-                    "main_action": "",
-                    "camera": "",
-                    "lighting": "",
-                    "props": "",
-                    "duration": 10,
+                    "scene": _compact_json(
+                        {
+                            "summary": "",
+                            "subtype": "",
+                            "start_position": "",
+                            "movement_space": "",
+                            "background_anchors": [],
+                        }
+                    ),
+                    "wig_focus": "[]",
+                    "action_plan": _compact_json(
+                        {
+                            "summary": "",
+                            "lifestyle_hook": "",
+                            "body_action": "",
+                            "hair_action": "",
+                            "detail_action": "",
+                            "ending_action": "",
+                            "action_tags": [],
+                        }
+                    ),
+                    "timeline": "[]",
+                    "camera": _compact_json(
+                        {
+                            "opening_shot": "",
+                            "movement": "",
+                            "framing": "half-body",
+                            "continuity_mode": "one_take" if _infer_creative_type(text) == "outdoor" else "planned_cuts",
+                        }
+                    ),
+                    "lighting": _compact_json(
+                        {
+                            "source": "background_reference",
+                            "direction": "background_reference",
+                            "color_temperature": "background_reference",
+                            "brightness_and_shadows": "background_reference",
+                        }
+                    ),
+                    "props": "[]",
+                    "continuity": "{}",
+                    "technical": _compact_json(
+                        {
+                            "duration_seconds": 10,
+                            "aspect_ratio": "9:16",
+                            "frame_rate": "30fps",
+                            "quality": "4K detail",
+                            "capture_style": "realistic smartphone footage",
+                            "skin_texture": "natural",
+                        }
+                    ),
+                    "audio": _compact_json({"ambience": "natural ambient sound", "dialogue": "none", "music": "none"}),
                     "positive_en": text if mostly_ascii else "",
                     "positive_zh": "" if mostly_ascii else text,
                     "quality_status": "draft",

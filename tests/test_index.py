@@ -34,15 +34,15 @@ class IndexTests(unittest.TestCase):
             self.assertFalse(index_status(index_path=index_path)["stale"])
             results = retrieve(
                 "sofa curls",
-                "finished_showcase",
+                "indoor",
                 top_k=3,
                 embedder=embedder,
                 index_path=index_path,
                 auto_index=False,
             )
             self.assertTrue(results)
-            self.assertEqual(results[0]["sample"]["id"], "fs-living-room-01")
-            self.assertTrue(all(item["sample"]["creative_type"] == "finished_showcase" for item in results))
+            self.assertIn("fs-living-room-01", {item["sample"]["id"] for item in results})
+            self.assertTrue(all(item["sample"]["creative_type"] == "indoor" for item in results))
 
     def test_index_is_stale_when_missing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

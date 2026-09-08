@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .core import (
+    CREATIVE_TYPES,
     WorkbenchError,
     default_corpus_path,
     ingest_sources,
@@ -61,7 +62,7 @@ def command_doctor(_: argparse.Namespace) -> int:
 def command_status(_: argparse.Namespace) -> int:
     all_samples = load_samples()
     counts = {"approved": 0, "draft": 0, "rejected": 0}
-    types = {"before_after": 0, "finished_showcase": 0}
+    types = {creative_type: 0 for creative_type in sorted(CREATIVE_TYPES)}
     for sample in all_samples:
         counts[sample.quality_status] += 1
         if sample.quality_status == "approved":
@@ -132,11 +133,11 @@ def command_evaluate(args: argparse.Namespace) -> int:
         results = retrieve(case["query"], case["creative_type"], top_k=3)
         expected = {str(tag).lower() for tag in case.get("expected_tags", [])}
         haystack = " ".join(
-            result["sample"]["scenario"]
+            str(result["sample"]["scene"].get("summary", ""))
             + " "
-            + result["sample"]["main_action"]
+            + str(result["sample"]["action_plan"].get("summary", ""))
             + " "
-            + " ".join(result["sample"]["wig_features"] + result["sample"]["props"])
+            + " ".join(result["sample"]["wig_focus"] + result["sample"]["props"])
             for result in results
         ).lower()
         ok = bool(results) and all(result["sample"]["creative_type"] == case["creative_type"] for result in results)
@@ -174,7 +175,7 @@ def build_parser() -> argparse.ArgumentParser:
     index.set_defaults(func=command_index)
 
     retrieve_parser = subparsers.add_parser("retrieve", help="检索已审核样例")
-    retrieve_parser.add_argument("--creative-type", required=True, choices=["before_after", "finished_showcase"])
+    retrieve_parser.add_argument("--creative-type", required=True, choices=sorted(CREATIVE_TYPES))
     retrieve_parser.add_argument("--query", required=True)
     retrieve_parser.add_argument("--top-k", type=int, default=3)
     retrieve_parser.add_argument("--no-auto-index", action="store_true")

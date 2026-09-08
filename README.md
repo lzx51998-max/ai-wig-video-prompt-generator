@@ -15,9 +15,9 @@
 3. 在 Codex 对话中说：`初始化提示词工作台`。
 4. 初始化通过后直接描述想要的视频，例如：
 
-   > 生成一个 10 秒的成品造型展示。黑色中分卷发，明亮客厅，侧身拨发，最后看向镜头微笑。
+   > 生成一个 10 秒的室内视频。黑色中分卷发，明亮客厅，切换到发际线细节和侧面轮廓，最后看向镜头微笑。
 
-更完整的团队流程见 [团队使用指南](docs/TEAM_GUIDE.md)。产品硬规则见 [PRD](PRD.md)。
+更完整的团队流程见 [团队使用指南](docs/TEAM_GUIDE.md)。提示词字段和组装顺序见 [提示词模板](提示词模板.md)。产品硬规则见 [PRD](PRD.md)。
 
 ## 本地命令
 
@@ -27,7 +27,7 @@
 python -m rag_app doctor
 python -m rag_app status
 python -m rag_app index
-python -m rag_app retrieve --creative-type finished_showcase --query "明亮客厅，侧身拨发" --top-k 3
+python -m rag_app retrieve --creative-type indoor --query "明亮客厅，侧身拨发，发际线细节" --top-k 3
 python -m rag_app evaluate
 ```
 

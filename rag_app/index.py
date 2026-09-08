@@ -7,11 +7,11 @@ from contextlib import closing
 from dataclasses import asdict
 from pathlib import Path
 
-from .core import Sample, WorkbenchError, corpus_fingerprint, load_samples, state_dir
+from .core import CREATIVE_TYPES, Sample, WorkbenchError, corpus_fingerprint, load_samples, state_dir
 from .embeddings import OllamaEmbedder
 
 
-INDEX_SCHEMA_VERSION = "1"
+INDEX_SCHEMA_VERSION = "2"
 
 
 def default_index_path() -> Path:
@@ -137,8 +137,8 @@ def retrieve(
     corpus_path: Path | None = None,
     auto_index: bool = True,
 ) -> list[dict]:
-    if creative_type not in {"before_after", "finished_showcase"}:
-        raise WorkbenchError("creative_type 必须是 before_after 或 finished_showcase")
+    if creative_type not in CREATIVE_TYPES:
+        raise WorkbenchError("creative_type 必须是 indoor 或 outdoor")
     if not query.strip():
         raise WorkbenchError("检索 query 不能为空")
     if not 1 <= top_k <= 10:

@@ -7,21 +7,21 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from rag_app.core import WorkbenchError, ingest_sources, load_samples, promote_review, read_source
+from rag_app.core import REVIEW_FIELDS, WorkbenchError, ingest_sources, load_samples, promote_review, read_source
 
 
 class CoreTests(unittest.TestCase):
     def test_shared_corpus_contains_approved_samples_for_both_types(self) -> None:
         samples = load_samples(approved_only=True)
         self.assertGreaterEqual(len(samples), 6)
-        self.assertEqual({sample.creative_type for sample in samples}, {"before_after", "finished_showcase"})
+        self.assertEqual({sample.creative_type for sample in samples}, {"indoor", "outdoor"})
 
     def test_ingest_markdown_creates_draft_review_rows(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "samples.md"
             source.write_text(
-                "# Sample 1\nA finished showcase in a living room.\n\n# Sample 2\nA transformation reveal near a mirror.",
+                "# Sample 1\nA finished showcase in a living room.\n\n# Sample 2\nAn outdoor transformation reveal on a garden path.",
                 encoding="utf-8",
             )
             review = root / "review.csv"
@@ -30,7 +30,7 @@ class CoreTests(unittest.TestCase):
             with review.open("r", encoding="utf-8-sig", newline="") as handle:
                 rows = list(csv.DictReader(handle))
             self.assertTrue(all(row["quality_status"] == "draft" for row in rows))
-            self.assertEqual(rows[1]["creative_type"], "before_after")
+            self.assertEqual(rows[1]["creative_type"], "outdoor")
 
     def test_read_minimal_docx(self) -> None:
         xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -47,11 +47,30 @@ class CoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             review = root / "review.csv"
-            review.write_text(
-                "id,creative_type,scenario,wig_features,main_action,camera,lighting,props,duration,positive_en,positive_zh,quality_status,source_file,notes\n"
-                "x,finished_showcase,room,,turn,,, ,10,English,中文,draft,file,\n",
-                encoding="utf-8-sig",
-            )
+            with review.open("w", encoding="utf-8-sig", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=REVIEW_FIELDS)
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "id": "x",
+                        "creative_type": "indoor",
+                        "scene": json.dumps({"summary": "room"}),
+                        "wig_focus": "[]",
+                        "action_plan": json.dumps({"summary": "turn"}),
+                        "timeline": "[]",
+                        "camera": json.dumps({"continuity_mode": "one_take"}),
+                        "lighting": "{}",
+                        "props": "[]",
+                        "continuity": "{}",
+                        "technical": json.dumps({"duration_seconds": 10}),
+                        "audio": "{}",
+                        "positive_en": "English",
+                        "positive_zh": "中文",
+                        "quality_status": "draft",
+                        "source_file": "file",
+                        "notes": "",
+                    }
+                )
             with self.assertRaises(WorkbenchError):
                 promote_review(review, root / "samples.jsonl")
 

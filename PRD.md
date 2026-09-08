@@ -105,29 +105,29 @@ V1.0 不包含以下能力：
 
 ## 8. 创意类型
 
-V1.0 只提供以下两类提示词。
+V1.0 按拍摄环境分为室内和室外。正常展示、细节展示、行走、转身、拨发和遮挡转场属于动作或展示标签，不再作为创意类型。
 
-### 8.1 换发前后反差
+### 8.1 室内
 
-通过自然遮挡、转身、镜头前动作或其他连续转场表现造型变化。变化后的假发必须严格匹配人物参考图。
-
-核心要求：
-
-- 前 1-3 秒建立视觉钩子。
-- 转场自然，不使用蒙太奇闪切或频繁切镜。
-- 变化后留出足够时间展示整体造型。
-- 不生成与参考图不同的第二款假发。
-
-### 8.2 成品造型展示
-
-从第一帧开始展示已经完成的假发造型，通过行走、转身、拨发、轻微甩发和侧面展示体现整体美感。
+适用于客厅、卧室、梳妆台、沙发、桌边、走廊和试衣间等室内背景。
 
 核心要求：
 
-- 人物始终是画面中心。
-- 假发在主要动作中保持完整可见。
-- 动作后头发应在重力作用下恢复原有造型。
-- 视频结尾以人物看向镜头并自然微笑完成展示。
+- 允许在半身主镜头、假发细节镜头和侧面轮廓镜头之间进行有目的的切换。
+- 最多使用三个镜头，每次切镜必须发生在明确的时间边界，并服务于具体的假发展示目标。
+- 切镜前后保持人物、假发、背景、家具、光线、位置和动作连续。
+- 禁止频繁切镜、连续快速硬切、无理由换机位和无关插入镜头。
+
+### 8.2 室外
+
+适用于庭院、街道、花园小路、露台和建筑入口等室外背景。
+
+核心要求：
+
+- 全程一镜到底，不切镜头，不更换机位。
+- 景别变化只能通过连续、平稳的跟随、推进、后退或横移完成。
+- 镜头移动速度与人物动作和行走速度一致。
+- 天气、自然光、阴影和环境物体在完整视频中保持稳定。
 
 ## 9. 提示词内容结构
 
@@ -148,25 +148,26 @@ V1.0 只提供以下两类提示词。
 默认结构：
 
 - 0-3 秒：建立视觉钩子并开始发型展示。
-- 4-10 秒：完成主要移动、转身、拨发和侧面展示。
+- 3-7 秒：完成主要身体动作和唯一的主要头发动态。
+- 7-10 秒：完成正面或侧面展示，头发恢复原造型，人物看向镜头自然微笑。
 
 时间段必须覆盖完整视频，不得出现含义不清的空白时段。每个时间段需明确人物位置、动作、表情、头发运动和镜头状态。
 
 ### 9.3 镜头
 
-- 默认采用一镜到底。
-- 第一阶段可使用固定镜头。
-- 第二阶段可使用平稳跟随镜头。
-- 从固定镜头进入跟随镜头时，必须是连续自然的运镜，不得形成隐性切镜。
+- 室内最多使用三个有明确展示目的的镜头，可在半身主镜头、细节镜头和侧面轮廓镜头之间切换。
+- 室内切镜只能发生在标明的时间边界，并保持人物、假发、背景、光线、位置和动作连续。
+- 室外采用一镜到底，不得切镜或更换机位。
+- 室外景别变化必须通过连续自然的运镜完成。
 - 镜头始终将人物保持在画面中心。
-- 禁止突然换机位、快速推拉和夸张运镜。
+- 禁止频繁或无明确目的地换机位、快速推拉和夸张运镜。
 
 ### 9.4 景别与构图
 
 - 使用近景、中景或半身景别。
 - 默认只展示人物半身，不展示腿部。
 - 假发的顶部、两侧轮廓和发尾应尽可能完整可见。
-- 景别变化必须通过连续、平稳的镜头移动完成。
+- 室内景别可在明确时间边界通过有目的的切镜变化；室外景别变化必须通过连续、平稳的镜头移动完成。
 - 人物不能长时间偏离画面中心或被道具遮挡。
 
 ### 9.5 动作
@@ -224,7 +225,7 @@ V1.0 只提供以下两类提示词。
 - 画质描述：4K detail。
 - 拍摄质感：超高清智能手机拍摄。
 - 皮肤：真实、自然、保留纹理。
-- 镜头：默认一镜到底。
+- 镜头：室内最多三个有明确展示目的的镜头；室外一镜到底。
 - 构图：半身为主，不展示腿部。
 - 声音：自然环境声，无对白。
 - 文字：不生成字幕、价格、乱码或中文。
@@ -236,7 +237,7 @@ V1.0 只提供以下两类提示词。
 ### 12.1 英文执行版
 
 ```text
-Do not use frequent shot changes, consecutive rapid hard cuts, montage flash cuts, sudden changes in shot size, fast push-ins or pull-outs, fast rotation, violent camera shake, exaggerated orbiting shots, flickering, frame skipping, stuttering, or ghosting.
+Do not use frequent or unmotivated shot changes, consecutive rapid hard cuts, montage flash cuts, abrupt unrelated camera-position changes, fast push-ins or pull-outs, fast rotation, violent camera shake, exaggerated orbiting shots, flickering, frame skipping, stuttering, or ghosting.
 Do not change the subject's identity, mature age, face shape, facial features, skin tone, teeth, smile, body shape, or skin texture. Do not make her look younger, swap her face, slim her face, over-smooth her skin, create plastic-looking skin, or generate another woman.
 Do not change the position of the middle part, the hairline, or the baby hairs. Do not allow the baby hairs to disappear, flicker, become thicker, change in number, drift in direction, clump into a solid mass, cover the eyes, or turn into neat bangs.
 Do not change the curly hairstyle into long hair, short hair, straight hair, large waves, braids, an afro, or any other hairstyle. Do not change the hair color, curl pattern, hair volume, or length. Do not create left-right asymmetry, prevent the hair from returning to its original shape after movement, or make the hair float without gravity.
@@ -249,7 +250,7 @@ Do not create an anime look, CGI look, fake plastic texture, excessive sharpenin
 ### 12.2 中文审核版
 
 ```text
-禁止频繁切镜、连续快速硬切、蒙太奇闪切、突然更换景别、快速推拉、快速旋转、剧烈摇晃、夸张环绕、闪烁、跳帧、卡顿和重影。
+禁止频繁或无明确展示目的的切镜、连续快速硬切、蒙太奇闪切、突然切换到无关机位、快速推拉、快速旋转、剧烈摇晃、夸张环绕、闪烁、跳帧、卡顿和重影。
 禁止改变人物身份、成熟年龄、脸型、五官、肤色、牙齿、笑容、身材和皮肤纹理；禁止年轻化、换脸、瘦脸、过度磨皮、塑料皮肤或生成另一位女性。
 禁止改变中分位置、发际线和额前细发；禁止额前细发消失、闪烁、变粗、数量改变、方向漂移、粘连成一片、遮挡眼睛或变成整齐刘海。
 禁止卷发变成长发、短发、直发、大波浪、编发、爆炸头或其他发型；禁止发色变化、卷度变化、发量变化、长度变化、左右不对称、甩动后无法恢复和头发无重力漂浮。
@@ -265,6 +266,8 @@ Do not create an anime look, CGI look, fake plastic texture, excessive sharpenin
 - 不得主动加入假发安装、修剪、涂胶或揭 lace 等动作。
 - 不得加入未经用户指定的额外人物、宠物、车辆或大型道具。
 - 不得在 10 秒内堆叠过多动作。
+- 室内切镜不得超过三个镜头，并必须在时间轴中写明每个镜头的展示目的。
+- 室外必须使用一个连续镜头，不得通过切镜完成动作或景别变化。
 - 人物转身或甩发时，必须同时描述头发的自然惯性和恢复状态。
 - 如果动作与半身构图冲突，应优先保证假发完整展示和人物身份稳定。
 - 如果背景空间不足以执行行走或转圈，应改为原地侧身、轻微转头和拨发。
@@ -289,7 +292,8 @@ Do not create an anime look, CGI look, fake plastic texture, excessive sharpenin
 - 分缝、发际线和额前细发稳定。
 - 头发运动符合重力且动作后恢复原造型。
 - 背景在完整视频中保持一致。
-- 镜头连续稳定，无硬切、跳帧或剧烈晃动。
+- 室内切镜数量和时间边界符合规划且连续性稳定；室外全程一镜到底。
+- 视频无频繁硬切、跳帧或剧烈晃动。
 - 人物始终以半身为主，假发清晰可见。
 - 没有额外人物、字幕、乱码、Logo 或平台界面。
 

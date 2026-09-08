@@ -1,10 +1,10 @@
-{"id":"eval-01","creative_type":"finished_showcase","query":"明亮客厅 黑色中分卷发 侧身托起发尾","expected_tags":["living room","sofa"]}
-{"id":"eval-02","creative_type":"finished_showcase","query":"梳妆镜 巧克力棕色卷发 坐姿展示","expected_tags":["vanity"]}
-{"id":"eval-03","creative_type":"finished_showcase","query":"户外小径 赤褐色卷发 缓慢走向镜头","expected_tags":["outdoor","garden"]}
-{"id":"eval-04","creative_type":"finished_showcase","query":"家庭办公室 短卷发 从椅子轻微起身","expected_tags":["office","desk"]}
-{"id":"eval-05","creative_type":"finished_showcase","query":"客厅沙发 自然光 展示卷发发量","expected_tags":["sofa","living room"]}
-{"id":"eval-06","creative_type":"before_after","query":"梳妆镜 手靠近镜头遮挡后展示黑色卷发","expected_tags":["vanity","mirror"]}
-{"id":"eval-07","creative_type":"before_after","query":"客厅沙发 转身连续展示深棕卷发","expected_tags":["sofa","living room"]}
-{"id":"eval-08","creative_type":"before_after","query":"门框空间遮挡 走出走廊 展示酒红卷发","expected_tags":["doorway","hallway"]}
-{"id":"eval-09","creative_type":"before_after","query":"更衣室 放下手机 蜜糖金卷发","expected_tags":["dressing room","smartphone"]}
-{"id":"eval-10","creative_type":"before_after","query":"自然连续遮挡后侧身展示卷发","expected_tags":["reveal","turn"]}
+{"id":"eval-01","creative_type":"indoor","query":"明亮客厅 黑色中分卷发 侧身托起发尾","expected_tags":["living room","sofa"]}
+{"id":"eval-02","creative_type":"indoor","query":"梳妆镜 巧克力棕色卷发 坐姿展示","expected_tags":["vanity"]}
+{"id":"eval-03","creative_type":"outdoor","query":"户外小径 赤褐色卷发 缓慢走向镜头","expected_tags":["outdoor","garden"]}
+{"id":"eval-04","creative_type":"indoor","query":"家庭办公室 短卷发 从椅子轻微起身","expected_tags":["office","desk"]}
+{"id":"eval-05","creative_type":"indoor","query":"客厅沙发 自然光 展示卷发发量","expected_tags":["sofa","living room"]}
+{"id":"eval-06","creative_type":"indoor","query":"梳妆镜 手靠近镜头遮挡后展示黑色卷发","expected_tags":["vanity","mirror"]}
+{"id":"eval-07","creative_type":"indoor","query":"客厅沙发 转身连续展示深棕卷发","expected_tags":["sofa","living room"]}
+{"id":"eval-08","creative_type":"indoor","query":"门框空间遮挡 走出走廊 展示酒红卷发","expected_tags":["doorway","hallway"]}
+{"id":"eval-09","creative_type":"indoor","query":"更衣室 放下手机 蜜糖金卷发","expected_tags":["dressing room","smartphone"]}
+{"id":"eval-10","creative_type":"indoor","query":"自然连续遮挡后侧身展示卷发","expected_tags":["reveal","turn"]}

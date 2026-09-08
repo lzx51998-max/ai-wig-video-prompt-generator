@@ -23,7 +23,7 @@ CHINESE = (
 class ValidatorTests(unittest.TestCase):
     def setUp(self) -> None:
         self.document = assemble_document(
-            {"creative_type": "finished_showcase", "duration": 10},
+            {"creative_type": "indoor", "duration": 10},
             {"positive_en": ENGLISH, "positive_zh": CHINESE},
         )
 
@@ -48,6 +48,15 @@ class ValidatorTests(unittest.TestCase):
         report = validate_document(modified, 10)
         self.assertFalse(report["valid"])
         self.assertTrue(any("discount" in error for error in report["errors"]))
+
+    def test_outdoor_requires_one_continuous_take(self) -> None:
+        document = assemble_document(
+            {"creative_type": "outdoor", "duration": 10},
+            {"positive_en": ENGLISH.replace("one continuous half-body take", "a stable half-body shot"), "positive_zh": CHINESE},
+        )
+        report = validate_document(document, 10)
+        self.assertFalse(report["valid"])
+        self.assertTrue(any("一镜到底" in error for error in report["errors"]))
 
     def test_rule_files_match_prd_code_blocks(self) -> None:
         prd = (project_root() / "PRD.md").read_text(encoding="utf-8")

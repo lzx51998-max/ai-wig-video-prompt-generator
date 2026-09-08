@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 
-from .core import WorkbenchError, project_root
+from .core import CREATIVE_TYPES, WorkbenchError, project_root
 
 
 HEADINGS = [
@@ -85,6 +85,15 @@ def _timeline_errors(positive_en: str, expected_duration: int | None) -> list[st
     return errors
 
 
+def _creative_type_from_material(sections: dict[str, str]) -> str | None:
+    material = sections.get("## 素材引用说明", "")
+    if "创意类型：室内" in material:
+        return "indoor"
+    if "创意类型：室外" in material:
+        return "outdoor"
+    return None
+
+
 def validate_document(text: str, expected_duration: int | None = None) -> dict:
     errors: list[str] = []
     sections, section_errors = _sections(text)
@@ -107,6 +116,12 @@ def validate_document(text: str, expected_duration: int | None = None) -> dict:
         if term.lower() in positive_zh.lower():
             errors.append(f"中文正向提示词包含禁止内容：{term}")
     errors.extend(_timeline_errors(positive_en, expected_duration))
+    creative_type = _creative_type_from_material(sections)
+    if creative_type not in CREATIVE_TYPES:
+        errors.append("素材引用说明中的创意类型必须是室内或室外")
+    continuous_take = re.search(r"\b(?:one|single)\s+continuous\b[^.]{0,45}\b(?:take|shot)\b", lower_en)
+    if creative_type == "outdoor" and not continuous_take:
+        errors.append("室外英文正向提示词必须明确一镜到底")
     expected_en, expected_zh = fixed_rules()
     if _unfence(sections["## English Negative Prompt"]) != expected_en:
         errors.append("固定英文负面提示词被删减、改写或重新排序")
@@ -123,14 +138,14 @@ def assemble_document(request: dict, draft: dict) -> str:
     if not 8 <= duration <= 12:
         raise WorkbenchError("request.duration 必须在 8–12 秒")
     creative_type = request.get("creative_type")
-    if creative_type not in {"before_after", "finished_showcase"}:
+    if creative_type not in CREATIVE_TYPES:
         raise WorkbenchError("request.creative_type 无效")
     positive_en = str(draft.get("positive_en", "")).strip()
     positive_zh = str(draft.get("positive_zh", "")).strip()
     if not positive_en or not positive_zh:
         raise WorkbenchError("draft 必须包含 positive_en 和 positive_zh")
     negative_en, negative_zh = fixed_rules()
-    type_zh = "换发前后反差" if creative_type == "before_after" else "成品造型展示"
+    type_zh = "室内" if creative_type == "indoor" else "室外"
     material = (
         f"创意类型：{type_zh}；时长：{duration} 秒。\n"
         "@人物参考图 是唯一主角及目标假发的唯一视觉依据；@背景参考图 是场景、空间和光线的唯一视觉依据。"
