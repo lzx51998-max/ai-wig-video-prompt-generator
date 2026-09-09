@@ -8,6 +8,7 @@ import zipfile
 from pathlib import Path
 
 from rag_app.core import REVIEW_FIELDS, WorkbenchError, ingest_sources, load_samples, promote_review, read_source
+from rag_app.session import asset_descriptor, empty_session, prepare_request
 
 
 class CoreTests(unittest.TestCase):
@@ -80,6 +81,65 @@ class CoreTests(unittest.TestCase):
             path.write_text(json.dumps({"id": "bad", "creative_type": "other"}), encoding="utf-8")
             with self.assertRaises(WorkbenchError):
                 load_samples(path)
+
+    def test_zero_fill_uses_image_facts_and_defaults(self) -> None:
+        incoming = {
+            "background_observation": {"creative_type": {"value": "indoor", "confidence": 0.96}},
+            "usable_props": ["stool"],
+            "subject_observation": {"default_body_action": "rise slowly from the stool"},
+        }
+        _, report = prepare_request(incoming, empty_session())
+        resolved = report["resolved_request"]
+        self.assertEqual(resolved["creative_type"], "indoor")
+        self.assertEqual(resolved["duration"], 10)
+        self.assertEqual(resolved["props"], ["stool"])
+        self.assertEqual(resolved["body_action"], "rise slowly from the stool")
+        self.assertFalse(report["requires_confirmation"])
+
+    def test_scoped_overrides_survive_only_matching_asset(self) -> None:
+        state = empty_session()
+        state.update(
+            {
+                "subject_asset": {"asset_id": "person-a"},
+                "background_asset": {"asset_id": "room-a"},
+                "subject_observation": {"pose": "standing"},
+                "background_observation": {"scene": "vanity"},
+                "usable_props": ["cup"],
+                "overrides": {
+                    "subject": {"pose": "keep seated"},
+                    "background": {"table": "vanity"},
+                    "generation": {"body_action": "keep seated"},
+                    "exclusions": ["cup"],
+                },
+            }
+        )
+        incoming = {"background_asset": {"asset_id": "room-b"}, "background_observation": {"scene": "living room"}}
+        updated, report = prepare_request(incoming, state)
+        self.assertEqual(updated["overrides"]["subject"]["pose"], "keep seated")
+        self.assertEqual(updated["overrides"]["background"], {})
+        self.assertEqual(updated["overrides"]["generation"]["body_action"], "keep seated")
+        self.assertEqual(updated["overrides"]["exclusions"], ["cup"])
+        self.assertEqual(report["resolved_request"]["body_action"], "keep seated")
+
+    def test_only_blocking_uncertainty_interrupts_generation(self) -> None:
+        incoming = {
+            "uncertainties": [
+                {"field": "wall_decoration", "confidence": 0.4, "blocks_generation": False},
+                {"field": "usable_props.stool", "confidence": 0.55, "blocks_generation": True},
+            ]
+        }
+        _, report = prepare_request(incoming, empty_session())
+        self.assertTrue(report["requires_confirmation"])
+        self.assertEqual(len(report["blockers"]), 1)
+
+    def test_asset_descriptor_uses_content_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            first = Path(directory) / "person-a.png"
+            second = Path(directory) / "renamed.png"
+            first.write_bytes(b"same-image-content")
+            second.write_bytes(b"same-image-content")
+            self.assertEqual(asset_descriptor(first)["asset_id"], asset_descriptor(second)["asset_id"])
+            self.assertEqual(asset_descriptor(first)["source_name"], "person-a.png")
 
 
 if __name__ == "__main__":

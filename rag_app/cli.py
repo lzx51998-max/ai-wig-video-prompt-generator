@@ -19,6 +19,7 @@ from .core import (
 )
 from .embeddings import OllamaEmbedder
 from .index import build_index, index_status, retrieve
+from .session import asset_descriptor, load_session, prepare_request, save_session
 from .validator import assemble_document, load_json, validate_document
 
 
@@ -34,7 +35,7 @@ def command_doctor(_: argparse.Namespace) -> int:
 
     record("python", sys.version_info >= (3, 11), platform.python_version())
     record("git", shutil.which("git") is not None, shutil.which("git") or "未找到")
-    for relative in ("PRD.md", "AGENTS.md", "rules/fixed_negative_en.txt", "rules/fixed_negative_zh.txt"):
+    for relative in ("PRD.md", "AGENTS.md", "提示词模板.md", "rules/fixed_negative_en.txt", "rules/fixed_negative_zh.txt"):
         exists = (project_root() / relative).exists()
         record(relative, exists, "存在" if exists else "缺失")
     try:
@@ -152,6 +153,26 @@ def command_evaluate(args: argparse.Namespace) -> int:
     return 0 if score >= 0.8 else 1
 
 
+def command_prepare(args: argparse.Namespace) -> int:
+    incoming = load_json(Path(args.request))
+    if args.subject_image:
+        incoming["subject_asset"] = asset_descriptor(Path(args.subject_image))
+    if args.background_image:
+        incoming["background_asset"] = asset_descriptor(Path(args.background_image))
+    state_path = Path(args.state) if args.state else None
+    state = load_session(state_path)
+    updated, report = prepare_request(incoming, state)
+    target = save_session(updated, state_path)
+    report["session_state"] = str(target)
+    if args.output:
+        output = Path(args.output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        report["output"] = str(output)
+    _json(report)
+    return 1 if report["requires_confirmation"] else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="wig-rag", description="AI 假发提示词 RAG 工作台")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -180,6 +201,14 @@ def build_parser() -> argparse.ArgumentParser:
     retrieve_parser.add_argument("--top-k", type=int, default=3)
     retrieve_parser.add_argument("--no-auto-index", action="store_true")
     retrieve_parser.set_defaults(func=command_retrieve)
+
+    prepare = subparsers.add_parser("prepare", help="合并图片观察、用户要求和跨轮纠错")
+    prepare.add_argument("--request", required=True)
+    prepare.add_argument("--subject-image")
+    prepare.add_argument("--background-image")
+    prepare.add_argument("--state")
+    prepare.add_argument("--output")
+    prepare.set_defaults(func=command_prepare)
 
     assemble = subparsers.add_parser("assemble", help="拼接固定规则并校验 Codex 草稿")
     assemble.add_argument("--request", required=True)

@@ -27,6 +27,7 @@
 python -m rag_app doctor
 python -m rag_app status
 python -m rag_app index
+python -m rag_app prepare --request .rag-workbench/request.json --subject-image <人物图路径> --background-image <背景图路径> --output .rag-workbench/prepared.json
 python -m rag_app retrieve --creative-type indoor --query "明亮客厅，侧身拨发，发际线细节" --top-k 3
 python -m rag_app evaluate
 ```

@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .coverage
+*.egg-info/
 
 # Local RAG state and generated artifacts
 .rag-workbench/
