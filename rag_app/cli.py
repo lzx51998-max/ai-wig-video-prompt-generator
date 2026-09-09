@@ -20,7 +20,7 @@ from .core import (
 from .embeddings import OllamaEmbedder
 from .index import build_index, index_status, retrieve
 from .session import asset_descriptor, load_session, prepare_request, save_session
-from .validator import assemble_document, load_json, validate_document
+from .validator import assemble_document, load_json, normalize_request, validate_document
 
 
 def _json(value: object) -> None:
@@ -106,7 +106,7 @@ def command_assemble(args: argparse.Namespace) -> int:
     request = load_json(Path(args.request))
     draft = load_json(Path(args.draft))
     document = assemble_document(request, draft)
-    report = validate_document(document, int(request.get("duration", 10)))
+    report = validate_document(document, int(normalize_request(request).get("duration", 10)))
     if not report["valid"]:
         raise WorkbenchError("组装后的提示词未通过校验：" + "；".join(report["errors"]))
     if args.output:
@@ -157,6 +157,10 @@ def command_prepare(args: argparse.Namespace) -> int:
     incoming = load_json(Path(args.request))
     if args.subject_image:
         incoming["subject_asset"] = asset_descriptor(Path(args.subject_image))
+    if args.before_subject_image:
+        incoming["before_subject_asset"] = asset_descriptor(Path(args.before_subject_image))
+    if args.after_subject_image:
+        incoming["after_subject_asset"] = asset_descriptor(Path(args.after_subject_image))
     if args.background_image:
         incoming["background_asset"] = asset_descriptor(Path(args.background_image))
     state_path = Path(args.state) if args.state else None
@@ -205,6 +209,8 @@ def build_parser() -> argparse.ArgumentParser:
     prepare = subparsers.add_parser("prepare", help="合并图片观察、用户要求和跨轮纠错")
     prepare.add_argument("--request", required=True)
     prepare.add_argument("--subject-image")
+    prepare.add_argument("--before-subject-image")
+    prepare.add_argument("--after-subject-image")
     prepare.add_argument("--background-image")
     prepare.add_argument("--state")
     prepare.add_argument("--output")
