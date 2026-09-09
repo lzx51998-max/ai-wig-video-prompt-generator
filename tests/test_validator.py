@@ -4,7 +4,7 @@ import re
 import unittest
 from pathlib import Path
 
-from rag_app.core import load_samples, project_root
+from rag_app.core import WorkbenchError, load_samples, project_root
 from rag_app.validator import assemble_document, fixed_rules, validate_document
 
 
@@ -29,6 +29,22 @@ class ValidatorTests(unittest.TestCase):
 
     def test_assembled_document_passes(self) -> None:
         report = validate_document(self.document, 10)
+        self.assertTrue(report["valid"], report["errors"])
+
+    def test_assemble_accepts_nested_prepare_request_shape(self) -> None:
+        document = assemble_document(
+            {"request": {"creative_type": "indoor", "duration": 10, "transition_mode": "none"}},
+            {"positive_en": ENGLISH, "positive_zh": CHINESE},
+        )
+        report = validate_document(document, 10)
+        self.assertTrue(report["valid"], report["errors"])
+
+    def test_assemble_accepts_prepared_report_shape(self) -> None:
+        document = assemble_document(
+            {"resolved_request": {"creative_type": "indoor", "duration": 10, "transition_mode": "none"}},
+            {"positive_en": ENGLISH, "positive_zh": CHINESE},
+        )
+        report = validate_document(document, 10)
         self.assertTrue(report["valid"], report["errors"])
 
     def test_modified_negative_prompt_fails(self) -> None:
@@ -57,6 +73,39 @@ class ValidatorTests(unittest.TestCase):
         report = validate_document(document, 10)
         self.assertFalse(report["valid"])
         self.assertTrue(any("一镜到底" in error for error in report["errors"]))
+
+    def test_occlusion_reveal_accepts_two_subject_references(self) -> None:
+        english = (
+            "Use @转场前人物参考图 before the reveal and @转场后人物参考图 after the reveal inside @背景参考图. "
+            "0-2 seconds: the same woman presents the before hairstyle. 2-3 seconds: her phone completely covers the lens. "
+            "3-10 seconds: the target wig appears and she presents its silhouette. The hairstyle change occurs only while the lens is completely covered."
+        )
+        chinese = (
+            "在@背景参考图中，遮挡前匹配@转场前人物参考图，遮挡后匹配@转场后人物参考图。"
+            "0-2秒展示转场前发型；2-3秒手机完全遮挡镜头；3-10秒展示目标假发。发型只在完全遮挡期间变化。"
+        )
+        document = assemble_document(
+            {"creative_type": "indoor", "duration": 10, "transition_mode": "occlusion_reveal"},
+            {"positive_en": english, "positive_zh": chinese},
+        )
+        report = validate_document(document, 10)
+        self.assertTrue(report["valid"], report["errors"])
+
+    def test_occlusion_reveal_rejects_missing_after_reference(self) -> None:
+        document = assemble_document(
+            {"creative_type": "indoor", "duration": 10, "transition_mode": "occlusion_reveal"},
+            {"positive_en": ENGLISH, "positive_zh": CHINESE},
+        )
+        report = validate_document(document, 10)
+        self.assertFalse(report["valid"])
+        self.assertTrue(any("转场后人物参考图" in error for error in report["errors"]))
+
+    def test_occlusion_reveal_rejects_outdoor_scene(self) -> None:
+        with self.assertRaises(WorkbenchError):
+            assemble_document(
+                {"creative_type": "outdoor", "duration": 10, "transition_mode": "occlusion_reveal"},
+                {"positive_en": ENGLISH, "positive_zh": CHINESE},
+            )
 
     def test_rule_files_match_prd_code_blocks(self) -> None:
         prd = (project_root() / "PRD.md").read_text(encoding="utf-8")

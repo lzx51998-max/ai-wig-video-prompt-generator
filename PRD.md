@@ -26,6 +26,7 @@
 - 发际线、分缝和额前细发自然。
 - 人物像真实的美国 TikTok 黑人女性美妆创作者。
 - 视频具有日常分享感，而不是传统硬广或虚假 CG 广告。
+- 视频具有适合美国区 TikTok 带货内容的明快节奏：首秒进入展示，每 2–3 秒形成一次清晰的信息节拍，动作利落但不仓促。
 
 ## 4. 非目标
 
@@ -34,7 +35,7 @@ V1.1 不包含以下能力：
 - 不直接调用 Grok 生成视频。
 - 不负责视频剪辑、字幕、配音、音乐或发布。
 - 不生成价格、折扣、品牌标志或购买按钮。
-- 不包含假发安装过程或安装体验类创意。
+- 不包含假发安装过程；遮挡变装只展示前后结果，不展示安装动作或工具。
 - 不自动移除或遮挡平台水印。
 - 不根据广告数据自动优化提示词。
 
@@ -54,7 +55,7 @@ V1.1 不包含以下能力：
 
 ## 6. 核心使用流程
 
-1. 用户提供一张已佩戴目标假发的人物参考图和一张背景参考图；文字可短至“帮我生成一套提示词”，也可提供完整动作和镜头要求。
+1. 普通模式下，用户提供一张已佩戴目标假发的人物参考图和一张背景参考图；遮挡变装模式下，用户提供转场前人物参考图、转场后人物参考图和一张背景参考图。文字可短至“帮我生成一套提示词”，也可提供完整动作和镜头要求。
 2. 产品分析人物、假发、服装、姿势、场景、家具、可用空间、光线和高置信可用道具，并记录图片标识、置信度和阻塞性不确定项。
 3. 产品按固定槽位合并信息。内容轨优先级为“用户明确要求、图片可确认事实、已批准样例、模板默认”；PRD 与固定负面词作为独立约束轨执行。
 4. 缺省槽位自动补齐：环境从图片判断，动作从安全默认动作和可用道具中选择，假发重点默认为整体轮廓与发尾，镜头默认为半身主镜头，时长默认为 10 秒。
@@ -93,6 +94,16 @@ V1.1 不包含以下能力：
 - 可供人物移动和展示发型的空间。
 
 背景不得在视频中被替换，不得擅自增加其他人物。
+
+#### 遮挡变装模式的两张人物参考图
+
+仅当 `transition_mode=occlusion_reveal` 时启用：
+
+- `@转场前人物参考图` 锁定遮挡前的同一人物、服装和原始发型。
+- `@转场后人物参考图` 锁定遮挡后的同一人物、服装和目标假发，是成品假发细节的唯一视觉依据。
+- 两张图必须是不同图片，且必须表现同一人物；人物身份、成熟年龄、脸型、五官、肤色和身材在前后保持一致。
+- 前后发型允许不同，但变化只能发生在镜头被手掌、手机或其他已确认道具完全遮挡的期间。
+- 该模式只展示转场前结果和转场后成品结果，不得展示戴假发、调整网帽、涂胶、剪 lace、固定发片或其他安装步骤。
 
 图片分析必须区分高置信事实与不确定项。只有高置信且未被用户排除的物体可进入 `usable_props`；低置信项默认不采用。是否室内或室外要依据完整空间判断，不能仅凭家具、天空等单个线索。
 
@@ -133,6 +144,10 @@ V1.1 按拍摄环境分为室内和室外。正常展示、细节展示、行走
 - 镜头移动速度与人物动作和行走速度一致。
 - 天气、自然光、阴影和环境物体在完整视频中保持稳定。
 
+### 8.3 遮挡变装动作模式
+
+遮挡变装不是新的创意类型，仅用于室内，并通过 `transition_mode=occlusion_reveal` 和动作标签表达；室外全程一镜到底，不得安排换装。遮挡必须短暂、自然且完全覆盖镜头；遮挡移开后直接出现转场后目标假发。普通的单人物图遮挡展示继续使用 `transition_mode=none`，不得自行推断发型发生变化。
+
 ## 9. 提示词内容结构
 
 每条提示词必须按照以下顺序生成。
@@ -145,6 +160,7 @@ V1.1 按拍摄环境分为室内和室外。正常展示、细节展示、行走
 - 明确主角位于 `@背景参考图` 中。
 - 明确视频的主要内容是展示假发。
 - 强调人物和假发必须严格遵循人物参考图。
+- 遮挡变装模式分别锁定 `@转场前人物参考图` 与 `@转场后人物参考图`，并明确两者为同一人物；普通模式继续使用 `@人物参考图`。
 - 强调背景必须严格遵循背景参考图。
 
 ### 9.2 时间轴
@@ -153,9 +169,10 @@ V1.1 按拍摄环境分为室内和室外。正常展示、细节展示、行走
 
 默认结构：
 
-- 0-3 秒：建立视觉钩子并开始发型展示。
-- 3-7 秒：完成主要身体动作和唯一的主要头发动态。
-- 7-10 秒：完成正面或侧面展示，头发恢复原造型，人物看向镜头自然微笑。
+- 0-1 秒：立即建立视觉钩子，不使用等待、静止摆姿或无信息铺垫。
+- 1-4 秒：利落完成主要身体动作并展示整体佩戴效果。
+- 4-7 秒：用唯一的主要头发动态突出发量、卷度、发际线或发尾等核心细节。
+- 7-10 秒：完成正面或侧面定格展示，头发恢复原造型，人物看向镜头自然微笑。
 
 时间段必须覆盖完整视频，不得出现含义不清的空白时段。每个时间段需明确人物位置、动作、表情、头发运动和镜头状态。
 
@@ -167,6 +184,8 @@ V1.1 按拍摄环境分为室内和室外。正常展示、细节展示、行走
 - 室外景别变化必须通过连续自然的运镜完成。
 - 镜头始终将人物保持在画面中心。
 - 禁止频繁或无明确目的地换机位、快速推拉和夸张运镜。
+- 镜头稳定不等于动作或运镜缓慢；使用及时、明确、有目的的跟随、推进或横移，并与人物动作同步形成节拍。
+- 禁止无意义等待、长时间保持同一姿势、刻意慢走、缓慢转身或拖长的推进与后退。
 
 ### 9.4 景别与构图
 
@@ -185,7 +204,7 @@ V1.1 按拍摄环境分为室内和室外。正常展示、细节展示、行走
 - 造型展示：正面展示、完整轮廓展示、侧面展示和发尾动态展示。
 - 结束动作：人物看向镜头，露出自然满意的微笑。
 
-动作必须自然、连贯且符合人体运动。每条视频只设置一个主要头发动态动作，避免同时安排多次快速甩头、大幅度转圈和连续撩发。
+动作必须自然、连贯且符合人体运动。每条视频只设置一个主要头发动态动作，避免同时安排多次快速甩头、大幅度转圈和连续撩发。动作执行应干净利落，每个时间段只传达一个主要展示信息；不得通过慢动作、停顿或重复同一动作填满时长。
 
 ### 9.6 光线
 
@@ -249,7 +268,7 @@ V1.1 按拍摄环境分为室内和室外。正常展示、细节展示、行走
 Do not use frequent or unmotivated shot changes, consecutive rapid hard cuts, montage flash cuts, abrupt unrelated camera-position changes, fast push-ins or pull-outs, fast rotation, violent camera shake, exaggerated orbiting shots, flickering, frame skipping, stuttering, or ghosting.
 Do not change the subject's identity, mature age, face shape, facial features, skin tone, teeth, smile, body shape, or skin texture. Do not make her look younger, swap her face, slim her face, over-smooth her skin, create plastic-looking skin, or generate another woman.
 Do not change the position of the middle part, the hairline, or the baby hairs. Do not allow the baby hairs to disappear, flicker, become thicker, change in number, drift in direction, clump into a solid mass, cover the eyes, or turn into neat bangs.
-Do not change the curly hairstyle into long hair, short hair, straight hair, large waves, braids, an afro, or any other hairstyle. Do not change the hair color, curl pattern, hair volume, or length. Do not create left-right asymmetry, prevent the hair from returning to its original shape after movement, or make the hair float without gravity.
+Outside an explicitly requested occlusion reveal, do not change the curly hairstyle into long hair, short hair, straight hair, large waves, braids, an afro, or any other hairstyle, and do not change the hair color, curl pattern, hair volume, or length. In an occlusion reveal, preserve the exact before look until the lens is completely covered, change the hairstyle only during full occlusion, and preserve the exact target wig after the reveal. Do not create left-right asymmetry, prevent the hair from returning to its intended before or after shape after movement, or make the hair float without gravity.
 Do not create bald patches, holes, a visible wig cap, visible lace edges, glue residue, unnatural seams, damaged scalp areas, or an incorrect parting at the back of the hair.
 Do not allow the hair to pass through the face, eyes, ears, fingers, neck, shoulders, necklace, bag strap, or dress. Do not create deformed hands, extra fingers, fused fingers, extra arms, reversed joints, or a palm that blocks the wig for an extended period.
 Do not add any other people to the background.
@@ -262,7 +281,7 @@ Do not create an anime look, CGI look, fake plastic texture, excessive sharpenin
 禁止频繁或无明确展示目的的切镜、连续快速硬切、蒙太奇闪切、突然切换到无关机位、快速推拉、快速旋转、剧烈摇晃、夸张环绕、闪烁、跳帧、卡顿和重影。
 禁止改变人物身份、成熟年龄、脸型、五官、肤色、牙齿、笑容、身材和皮肤纹理；禁止年轻化、换脸、瘦脸、过度磨皮、塑料皮肤或生成另一位女性。
 禁止改变中分位置、发际线和额前细发；禁止额前细发消失、闪烁、变粗、数量改变、方向漂移、粘连成一片、遮挡眼睛或变成整齐刘海。
-禁止卷发变成长发、短发、直发、大波浪、编发、爆炸头或其他发型；禁止发色变化、卷度变化、发量变化、长度变化、左右不对称、甩动后无法恢复和头发无重力漂浮。
+除非用户明确要求遮挡变装，否则禁止卷发变成长发、短发、直发、大波浪、编发、爆炸头或其他发型，禁止发色、卷度、发量和长度变化。遮挡变装时，镜头完全遮挡前必须严格保持转场前造型，只允许在完全遮挡期间改变发型，遮挡移开后必须严格保持目标假发。禁止左右不对称、动作后无法恢复前后阶段各自目标造型和头发无重力漂浮。
 禁止背面出现秃块、空洞、假发网帽、蕾丝边缘、胶水痕迹、不自然接缝、头皮破损或错误分缝。
 禁止头发穿过脸部、眼睛、耳朵、手指、脖子、肩膀、项链、包带或连衣裙；禁止手部畸形、多余手指、粘连手指、多余手臂、反向关节或手掌长时间遮挡假发。
 禁止背景出现其他人物。
@@ -296,6 +315,7 @@ Do not create an anime look, CGI look, fake plastic texture, excessive sharpenin
 ### 14.2 预期视频验收
 
 - 第一眼像真实的 TikTok 美妆创作者视频。
+- 首秒有明确视觉钩子，整体节奏明快，每 2–3 秒出现一次新的假发展示信息，且没有无意义停顿或拖沓运镜。
 - 人物身份与参考图一致，没有换脸或年轻化。
 - 假发款式、颜色、长度、卷度和发量没有变化。
 - 分缝、发际线和额前细发稳定。

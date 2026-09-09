@@ -55,6 +55,7 @@ class CoreTests(unittest.TestCase):
                     {
                         "id": "x",
                         "creative_type": "indoor",
+                        "transition_mode": "none",
                         "scene": json.dumps({"summary": "room"}),
                         "wig_focus": "[]",
                         "action_plan": json.dumps({"summary": "turn"}),
@@ -65,6 +66,7 @@ class CoreTests(unittest.TestCase):
                         "continuity": "{}",
                         "technical": json.dumps({"duration_seconds": 10}),
                         "audio": "{}",
+                        "pacing": "{}",
                         "positive_en": "English",
                         "positive_zh": "中文",
                         "quality_status": "draft",
@@ -140,6 +142,52 @@ class CoreTests(unittest.TestCase):
             second.write_bytes(b"same-image-content")
             self.assertEqual(asset_descriptor(first)["asset_id"], asset_descriptor(second)["asset_id"])
             self.assertEqual(asset_descriptor(first)["source_name"], "person-a.png")
+
+    def test_occlusion_reveal_requires_two_distinct_subject_images(self) -> None:
+        incoming = {"request": {"transition_mode": "occlusion_reveal"}}
+        with self.assertRaises(WorkbenchError):
+            prepare_request(incoming, empty_session())
+
+        incoming.update(
+            {
+                "before_subject_asset": {"asset_id": "before"},
+                "after_subject_asset": {"asset_id": "after"},
+            }
+        )
+        _, report = prepare_request(incoming, empty_session())
+        self.assertEqual(report["resolved_request"]["transition_mode"], "occlusion_reveal")
+
+    def test_occlusion_reveal_rejects_outdoor_scene(self) -> None:
+        incoming = {
+            "request": {"transition_mode": "occlusion_reveal", "creative_type": "outdoor"},
+            "before_subject_asset": {"asset_id": "before"},
+            "after_subject_asset": {"asset_id": "after"},
+        }
+        with self.assertRaises(WorkbenchError):
+            prepare_request(incoming, empty_session())
+
+    def test_changing_one_transition_image_only_clears_its_observation(self) -> None:
+        state = empty_session()
+        state.update(
+            {
+                "before_subject_asset": {"asset_id": "before-a"},
+                "after_subject_asset": {"asset_id": "after-a"},
+                "before_subject_observation": {"hair": "natural"},
+                "after_subject_observation": {"hair": "curly wig"},
+                "overrides": {
+                    "subject": {"before": {"hair": "natural"}, "after": {"hair": "curly wig"}},
+                    "background": {},
+                    "generation": {},
+                    "exclusions": [],
+                },
+            }
+        )
+        incoming = {"before_subject_asset": {"asset_id": "before-b"}}
+        updated, _ = prepare_request(incoming, state)
+        self.assertEqual(updated["before_subject_observation"], {})
+        self.assertEqual(updated["after_subject_observation"], {"hair": "curly wig"})
+        self.assertNotIn("before", updated["overrides"]["subject"])
+        self.assertIn("after", updated["overrides"]["subject"])
 
 
 if __name__ == "__main__":

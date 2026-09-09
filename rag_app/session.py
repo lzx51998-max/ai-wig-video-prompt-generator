@@ -6,13 +6,17 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from .core import CREATIVE_TYPES, WorkbenchError, state_dir
+from .core import CREATIVE_TYPES, TRANSITION_MODES, WorkbenchError, state_dir
 
 
 SESSION_FIELDS = (
     "subject_asset",
+    "before_subject_asset",
+    "after_subject_asset",
     "background_asset",
     "subject_observation",
+    "before_subject_observation",
+    "after_subject_observation",
     "background_observation",
     "usable_props",
     "movement_constraints",
@@ -29,8 +33,12 @@ def default_session_path() -> Path:
 def empty_session() -> dict[str, Any]:
     return {
         "subject_asset": {},
+        "before_subject_asset": {},
+        "after_subject_asset": {},
         "background_asset": {},
         "subject_observation": {},
+        "before_subject_observation": {},
+        "after_subject_observation": {},
         "background_observation": {},
         "usable_props": [],
         "movement_constraints": [],
@@ -94,8 +102,12 @@ def update_session(current: dict[str, Any], incoming: dict[str, Any]) -> dict[st
     state = deepcopy(current)
     old_subject = str((state.get("subject_asset") or {}).get("asset_id", ""))
     old_background = str((state.get("background_asset") or {}).get("asset_id", ""))
+    old_before = str((state.get("before_subject_asset") or {}).get("asset_id", ""))
+    old_after = str((state.get("after_subject_asset") or {}).get("asset_id", ""))
     new_subject = str((incoming.get("subject_asset") or {}).get("asset_id", old_subject))
     new_background = str((incoming.get("background_asset") or {}).get("asset_id", old_background))
+    new_before = str((incoming.get("before_subject_asset") or {}).get("asset_id", old_before))
+    new_after = str((incoming.get("after_subject_asset") or {}).get("asset_id", old_after))
 
     if old_subject and new_subject and old_subject != new_subject:
         state["subject_observation"] = {}
@@ -105,6 +117,14 @@ def update_session(current: dict[str, Any], incoming: dict[str, Any]) -> dict[st
         state["usable_props"] = []
         state["movement_constraints"] = []
         state["overrides"]["background"] = {}
+    if old_before and new_before and old_before != new_before:
+        state["before_subject_observation"] = {}
+        subject_overrides = state["overrides"].get("subject") or {}
+        subject_overrides.pop("before", None)
+    if old_after and new_after and old_after != new_after:
+        state["after_subject_observation"] = {}
+        subject_overrides = state["overrides"].get("subject") or {}
+        subject_overrides.pop("after", None)
 
     for key in SESSION_FIELDS:
         if key in incoming and key != "overrides":
@@ -129,16 +149,29 @@ def prepare_request(incoming: dict[str, Any], state: dict[str, Any]) -> tuple[di
     exclusions = set(updated["overrides"]["exclusions"])
 
     explicit = dict(incoming.get("request") or {})
+    transition_mode = generation.get("transition_mode", explicit.get("transition_mode", "none"))
+    if transition_mode not in TRANSITION_MODES:
+        raise WorkbenchError("transition_mode 必须是 none 或 occlusion_reveal")
+    if transition_mode == "occlusion_reveal":
+        if not updated.get("before_subject_asset") or not updated.get("after_subject_asset"):
+            raise WorkbenchError("遮挡变装模式必须同时提供转场前和转场后人物参考图")
+        before_id = (updated["before_subject_asset"] or {}).get("asset_id")
+        after_id = (updated["after_subject_asset"] or {}).get("asset_id")
+        if before_id == after_id:
+            raise WorkbenchError("遮挡变装模式的转场前后人物参考图不能是同一张图片")
     image_type = background.get("creative_type")
     if isinstance(image_type, dict):
         image_type = image_type.get("value")
     creative_type = generation.get("creative_type", explicit.get("creative_type", image_type or "indoor"))
     if creative_type not in CREATIVE_TYPES:
         raise WorkbenchError("creative_type 必须是 indoor 或 outdoor")
+    if transition_mode == "occlusion_reveal" and creative_type != "indoor":
+        raise WorkbenchError("遮挡变装模式仅支持 indoor；outdoor 必须使用 transition_mode=none")
 
     props = generation.get("props", explicit.get("props", updated.get("usable_props") or []))
     props = [item for item in props if item not in exclusions]
     resolved = {
+        "transition_mode": transition_mode,
         "creative_type": creative_type,
         "duration": int(generation.get("duration", explicit.get("duration", 10))),
         "wig_focus": generation.get("wig_focus", explicit.get("wig_focus", ["overall silhouette", "hair ends"])),

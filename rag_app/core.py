@@ -12,9 +12,11 @@ from xml.etree import ElementTree
 
 
 CREATIVE_TYPES = {"indoor", "outdoor"}
+TRANSITION_MODES = {"none", "occlusion_reveal"}
 REVIEW_FIELDS = [
     "id",
     "creative_type",
+    "transition_mode",
     "scene",
     "wig_focus",
     "action_plan",
@@ -25,6 +27,7 @@ REVIEW_FIELDS = [
     "continuity",
     "technical",
     "audio",
+    "pacing",
     "positive_en",
     "positive_zh",
     "quality_status",
@@ -65,6 +68,8 @@ class Sample:
     continuity: dict[str, Any] = field(default_factory=dict)
     technical: dict[str, Any] = field(default_factory=dict)
     audio: dict[str, Any] = field(default_factory=dict)
+    transition_mode: str = "none"
+    pacing: dict[str, Any] = field(default_factory=dict)
     positive_en: str = ""
     positive_zh: str = ""
     quality_status: str = "draft"
@@ -75,7 +80,7 @@ class Sample:
     def from_dict(cls, raw: dict) -> "Sample":
         data = dict(raw)
         data = _upgrade_legacy_sample(data)
-        for key in ("scene", "action_plan", "camera", "lighting", "continuity", "technical", "audio"):
+        for key in ("scene", "action_plan", "camera", "lighting", "continuity", "technical", "audio", "pacing"):
             parsed = _parse_structured(data.get(key), {})
             if not isinstance(parsed, dict):
                 raise WorkbenchError(f"样例 {data.get('id', '<unknown>')} 的 {key} 必须是 JSON 对象")
@@ -111,6 +116,8 @@ class Sample:
             raise WorkbenchError(f"样例 {self.id} 的 creative_type 必须是 {sorted(CREATIVE_TYPES)}")
         if self.quality_status not in {"draft", "approved", "rejected"}:
             raise WorkbenchError(f"样例 {self.id} 的 quality_status 无效")
+        if self.transition_mode not in TRANSITION_MODES:
+            raise WorkbenchError(f"样例 {self.id} 的 transition_mode 必须是 {sorted(TRANSITION_MODES)}")
         if not 8 <= self.duration <= 12:
             raise WorkbenchError(f"样例 {self.id} 的 technical.duration_seconds 必须在 8–12 秒")
         if self.quality_status == "approved" and not (self.positive_en and self.positive_zh):
@@ -143,6 +150,7 @@ class Sample:
         return "\n".join(
             [
                 f"creative_type: {self.creative_type}",
+                f"transition_mode: {self.transition_mode}",
                 f"scene: {_compact_json(self.scene)}",
                 f"wig_focus: {', '.join(self.wig_focus)}",
                 f"action_plan: {_compact_json(self.action_plan)}",
@@ -153,6 +161,7 @@ class Sample:
                 f"continuity: {_compact_json(self.continuity)}",
                 f"technical: {_compact_json(self.technical)}",
                 f"audio: {_compact_json(self.audio)}",
+                f"pacing: {_compact_json(self.pacing)}",
                 self.positive_en,
                 self.positive_zh,
             ]
@@ -332,6 +341,7 @@ def ingest_sources(input_path: Path, output_csv: Path) -> int:
                 {
                     "id": f"import-{digest}",
                     "creative_type": _infer_creative_type(text),
+                    "transition_mode": "none",
                     "scene": _compact_json(
                         {
                             "summary": "",
@@ -383,6 +393,14 @@ def ingest_sources(input_path: Path, output_csv: Path) -> int:
                         }
                     ),
                     "audio": _compact_json({"ambience": "natural ambient sound", "dialogue": "none", "music": "none"}),
+                    "pacing": _compact_json(
+                        {
+                            "platform": "U.S. TikTok Shop",
+                            "hook_deadline_seconds": 1,
+                            "information_beat_seconds": "2-3",
+                            "style": "brisk, rhythmic, purposeful, responsive",
+                        }
+                    ),
                     "positive_en": text if mostly_ascii else "",
                     "positive_zh": "" if mostly_ascii else text,
                     "quality_status": "draft",
