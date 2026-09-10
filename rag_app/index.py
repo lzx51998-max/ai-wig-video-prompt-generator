@@ -147,7 +147,10 @@ def retrieve(
     status = index_status(index_path, corpus_path)
     if status["stale"]:
         if not auto_index:
-            raise WorkbenchError("本地索引缺失或已过期，请运行 python -m rag_app index")
+            raise WorkbenchError(
+                "本地索引缺失或已过期，请运行 "
+                "powershell -ExecutionPolicy Bypass -File scripts/rag.ps1 index"
+            )
         build_index(embedder=provider, index_path=index_path, corpus_path=corpus_path)
     query_vector = provider.embed([query])[0]
     destination = index_path or default_index_path()

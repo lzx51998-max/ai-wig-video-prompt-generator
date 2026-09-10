@@ -10,6 +10,8 @@ __pycache__/
 outputs/
 knowledge/review*.csv
 knowledge/raw/
+.resume_build/
+.workbuddy/
 
 # Private/reference media must never be committed
 *.png

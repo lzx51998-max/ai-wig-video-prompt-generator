@@ -16,7 +16,7 @@
 2. 让 Codex“导入这些样例”，生成本地审核 CSV。
 3. 人工补齐标签，把合格记录的 `quality_status` 改为 `approved`。
 4. 让 Codex执行 `promote`、重建索引并运行评测。
-5. 通过独立分支和 Pull Request 合并 `knowledge/samples.jsonl`。
+5. 测试通过并确认不含隐私数据后，直接同步 `main` 分支。
 
 不得把人物图片、客户资料、密钥或未获授权的提示词提交到 GitHub。Git 删除不能自动清除历史中的敏感内容，因此必须在提交前检查。
 
@@ -24,9 +24,11 @@
 
 在没有本地改动时对 Codex 说“更新到 GitHub 最新版本并重建知识库”。如果有改动，Codex 会停止，避免覆盖工作。
 
+需要共享本地改动时，对 Codex 说“同步到 GitHub”。Codex 会先检查隐私数据并运行测试，然后提交并直接推送到 `main`；不使用强制推送。
+
 ## 故障排查
 
 - `Python not found`：安装 Python 3.11+，并启用 Add Python to PATH。
 - `Ollama unavailable`：启动 Ollama，然后运行 `ollama pull embeddinggemma`。
-- `index is stale`：运行 `python -m rag_app index`。
+- `index is stale`：运行 `powershell -ExecutionPolicy Bypass -File scripts/rag.ps1 index`。
 - `no approved samples`：先完成样例审核，不能把 `draft` 记录用于生成。

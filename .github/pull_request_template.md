@@ -5,7 +5,7 @@
 ## 验证结果
 
 - [ ] `python -m unittest discover -s tests -v` 已通过
-- [ ] `python -m rag_app status` 输出符合预期
+- [ ] `powershell -ExecutionPolicy Bypass -File scripts/rag.ps1 status` 输出符合预期
 - [ ] 修改知识库时已完成人工审核
 
 ## 隐私检查

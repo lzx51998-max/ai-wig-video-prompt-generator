@@ -24,12 +24,12 @@
 通常由 Codex 自动调用；排查问题时可以手工运行：
 
 ```powershell
-python -m rag_app doctor
-python -m rag_app status
-python -m rag_app index
-python -m rag_app prepare --request .rag-workbench/request.json --subject-image <人物图路径> --background-image <背景图路径> --output .rag-workbench/prepared.json
-python -m rag_app retrieve --creative-type indoor --query "明亮客厅，侧身拨发，发际线细节" --top-k 3
-python -m rag_app evaluate
+powershell -ExecutionPolicy Bypass -File scripts/rag.ps1 doctor
+powershell -ExecutionPolicy Bypass -File scripts/rag.ps1 status
+powershell -ExecutionPolicy Bypass -File scripts/rag.ps1 index
+powershell -ExecutionPolicy Bypass -File scripts/rag.ps1 prepare --request .rag-workbench/request.json --subject-image <人物图路径> --background-image <背景图路径> --output .rag-workbench/prepared.json
+powershell -ExecutionPolicy Bypass -File scripts/rag.ps1 retrieve --creative-type indoor --query "明亮客厅，侧身拨发，发际线细节" --top-k 3
+powershell -ExecutionPolicy Bypass -File scripts/rag.ps1 evaluate
 ```
 
 本项目的 Python 运行时代码无第三方依赖。向量由本机 Ollama 的 `embeddinggemma` 生成，并保存在 Git 忽略的 `.rag-workbench/index.sqlite3`。
